@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>youssof</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #20232a;
+            color: #61dafb;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        } 
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <script>
+        let font;
+        let points;
+        let particles = [];
+
+        function preload() {
+            font = loadFont('https://cdnjs.cloudflare.com/ajax/libs/topcoat/0.8.0/font/SourceCodePro-Regular.otf');
+        }
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            textFont(font);
+            textSize(200);
+            fill(255);
+            noStroke();
+            let textBounds = font.textBounds('baraa', 0, 0, 200);
+            let x = (width - textBounds.w) / 2;
+            let y = (height + textBounds.h) / 2;
+            points = font.textToPoints('baraa', x, y, 200, {
+                sampleFactor: 0.1
+            });
+
+            for (let i = 0; i < points.length; i++) {
+                let pt = points[i];
+                let particle = new Particle(pt.x, pt.y);
+                particles.push(particle);
+            }
+        }
+
+        function draw() {
+            background(32, 35, 42, 25); // Create a trail effect
+            for (let i = 0; i < particles.length; i++) {
+                let particle = particles[i];
+                particle.behaviors();
+                particle.update();
+                particle.show();
+            }
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.pos = createVector(random(width), random(height));
+                this.target = createVector(x, y);
+                this.vel = p5.Vector.random2D();
+                this.acc = createVector();
+                this.r = 8;
+                this.maxSpeed = 10;
+                this.maxForce = 1;
+                this.alpha = 255; // For glow effect
+            }
+
+            behaviors() {
+                let arrive = this.arrive(this.target);
+                let mouse = createVector(mouseX, mouseY);
+                let flee = this.flee(mouse);
+
+                arrive.mult(1);
+                flee.mult(5);
+
+                this.applyForce(arrive);
+                this.applyForce(flee);
+            }
+
+            applyForce(f) {
+                this.acc.add(f);
+            }
+
+            update() {
+                this.pos.add(this.vel);
+                this.vel.add(this.acc);
+                this.acc.mult(0);
+            }
+
+            show() {
+                fill(102, 0, 123, this.alpha); // Apply glow effect
+                noStroke();
+                ellipse(this.pos.x, this.pos.y, this.r * 2);
+            }
+
+            arrive(target) {
+                let desired = p5.Vector.sub(target, this.pos);
+                let d = desired.mag();
+                let speed = this.maxSpeed;
+                if (d < 100) {
+                    speed = map(d, 0, 100, 0, this.maxSpeed);
+                }
+                desired.setMag(speed);
+                let steer = p5.Vector.sub(desired, this.vel);
+                steer.limit(this.maxForce);
+                return steer;
+            }
+
+            flee(target) {
+                let desired = p5.Vector.sub(target, this.pos);
+                let d = desired.mag();
+                if (d < 50) {
+                    desired.setMag(this.maxSpeed);
+                    desired.mult(-1);
+                    let steer = p5.Vector.sub(desired, this.vel);
+                    steer.limit(this.maxForce);
+                    return steer;
+                } else {
+                    return createVector(0, 0);
+                }
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+            setup();
+        }
+    </script>
+</body>
+</html>
